@@ -26,6 +26,7 @@
     <version>37</version>
   </parent>
 
+  <groupId>com.inventage.vertx</groupId>
   <artifactId>vertx-http-proxy</artifactId>
   <version>1.0.0-SNAPSHOT</version>
 
@@ -35,6 +36,7 @@
     <stack.version>4.0.1-SNAPSHOT</stack.version>
     <fatjar.dir>${project.build.directory}</fatjar.dir>
     <doc.skip>true</doc.skip>
+    <maven.deploy.skip>true</maven.deploy.skip> <!-- we deploy via nexus-staging-maven-plugin -->
   </properties>
 
   <dependencyManagement>
@@ -184,7 +186,17 @@
           </execution>
         </executions>
       </plugin>
-
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.8</version>
+        <configuration>
+          <serverId>inventage-keycloak-nexus2</serverId>
+          <nexusUrl>https://nexus.inventage.com</nexusUrl>
+          <stagingProfileId>ea3c1b1825f57</stagingProfileId>
+          <skipStaging>false</skipStaging>
+        </configuration>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
