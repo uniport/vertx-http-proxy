@@ -1,7 +1,7 @@
 pipeline {
     agent {
         node {
-            label 'southport'
+            label 'java11'
         }
     }
 
@@ -17,7 +17,7 @@ pipeline {
 
     environment {
         LINE_SEPARATOR = '================================================================================'
-        CI_REGISTRY_CREDS = credentials('portal-registry-creds')
+        CI_REGISTRY_CREDS = credentials('inventage-projectware')
         BUILD_STATUS_EMAIL_RECIPIENTS = 'esteiner@inventage.com'
     }
 
