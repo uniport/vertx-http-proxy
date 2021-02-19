@@ -69,7 +69,7 @@ pipeline {
 
                 sh 'mvn help:system'
 
-                mvn("-s .jenkins/settings.xml", "-Djava.io.tmpdir=${WORKSPACE}", "clean", "install")
+                mvn("-s .jenkins/settings.xml", "-Djava.io.tmpdir=${WORKSPACE}", "clean", "deploy")
             }
         }
     }
