@@ -11,10 +11,6 @@ pipeline {
         ansiColor('xterm')
     }
 
-    parameters {
-        string(defaultValue: 'master', description: 'Branch name filter to push docker images', name: 'BRANCH_FILTER')
-    }
-
     environment {
         LINE_SEPARATOR = '================================================================================'
         CI_REGISTRY_CREDS = credentials('inventage-projectware')

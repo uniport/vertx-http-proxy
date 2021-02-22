@@ -116,7 +116,7 @@ public class HttpProxyImpl implements HttpProxy {
       if (ar.succeeded()) {
         handleProxyResponse(ar.result(), ar2 -> {});
       } else {
-        // TODO ???
+        System.out.println("handleProxyRequestAndProxyResponse: request failed with: " + ar.cause().getMessage());
       }
     });
   }
