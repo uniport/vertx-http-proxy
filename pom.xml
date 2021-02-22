@@ -33,7 +33,7 @@
     <name>Vert.x Http Proxy</name>
 
     <properties>
-        <stack.version>4.0.1-SNAPSHOT</stack.version>
+        <stack.version>4.0.2</stack.version>
         <fatjar.dir>${project.build.directory}</fatjar.dir>
         <doc.skip>true</doc.skip>
         <maven.deploy.skip>true</maven.deploy.skip> <!-- we deploy via nexus-staging-maven-plugin -->
