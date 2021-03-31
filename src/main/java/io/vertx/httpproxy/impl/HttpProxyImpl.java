@@ -97,17 +97,6 @@ public class HttpProxyImpl implements HttpProxy {
       return;
     }
 
-    // Handle from cache
-    HttpMethod method = outboundRequest.method();
-    if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
-      String cacheKey = proxyRequest.absoluteURI();
-      Resource resource = cache.computeIfPresent(cacheKey, CACHE_GET_AND_VALIDATE);
-      if (resource != null) {
-        if (tryHandleProxyRequestFromCache(proxyRequest, resource)) {
-          return;
-        }
-      }
-    }
     handleProxyRequestAndProxyResponse(proxyRequest);
   }
 
