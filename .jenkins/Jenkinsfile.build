@@ -66,7 +66,9 @@ pipeline {
                 sh 'mvn help:system'
 
                 mvn("-s .jenkins/settings.xml", "-Djava.io.tmpdir=${WORKSPACE}", "clean", "deploy")
-                env.STAGING_REPOSITORY_ID = util.stagingRepositoryId('./target/nexus-staging/staging/ea3c1b1825f57.properties')
+                script {
+                    env.STAGING_REPOSITORY_ID = util.stagingRepositoryId('./target/nexus-staging/staging/ea3c1b1825f57.properties')
+                }
             }
         }
 
