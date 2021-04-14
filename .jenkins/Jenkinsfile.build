@@ -128,7 +128,7 @@ void setPackageEnvironmentVariables() {
     env.PACKAGE_VERSION = pom.version
     env.PACKAGE_GROUP_ID = pom.groupId
     env.PACKAGE_ARTIFACT_ID = pom.artifactId
-    env.PROMOTION_TAG = "${env.PACKAGE_GROUP_ID}:${env.PACKAGE_VERSION}"
+    env.PROMOTION_TAG = "${env.PACKAGE_GROUP_ID}_${env.PACKAGE_VERSION}"
     env.PROMOTION_REPO_NAME = pom.properties['docker.promotion.repository.name']
 }
 
