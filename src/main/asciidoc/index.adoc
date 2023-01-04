@@ -7,6 +7,7 @@ higher concerns.
 WARNING: This module has _Tech Preview_ status, this means the API can change between versions.
 
 == Using Vert.x Http Proxy
+
 To use Vert.x Http Proxy, add the following dependency to the _dependencies_ section of your build descriptor:
 
 * Maven (in your `pom.xml`):
@@ -29,33 +30,115 @@ dependencies {
 }
 ----
 
-== Basic Http Proxy
+== Reverse proxy server
 
-In order to accomplish local reverse proxy with Vert.x Http Proxy you need the following:
+In order to accomplish a reverse proxy with Vert.x Http Proxy you need the following:
 
-1. *Proxy Server* that handles front requests and forward them to the *origin server* using `HttpProxy` instance.
-2. *Origin Server* that handles requests from the *proxy server* and handles responses accordingly.
+1. *Proxy Server* that handles user-agent requests and forward them to the *origin server*
+2. *Origin Server* that handles requests from the *proxy server* and respond accordingly
 
-Now, you have the overall concept so let's dive in implementation and begin with *origin server* then
-the *proxy server* with `HttpProxy`:
-
-== Origin Server (Backend)
-
-You simply create the *origin server* that listens to port `7070`
-
-[source,java]
-----
-{@link examples.HttpProxyExamples#origin}
-----
-
-== Proxy Server With `HttpProxy`
-
-Create the *proxy server* that listens to port `8080` with `HttpProxy` instance that handles reverse proxy logic
-accordingly.
+You can create a *proxy server* that listens to port `8080` and implement reverse proxy logic
 
 [source,java]
 ----
 {@link examples.HttpProxyExamples#proxy}
 ----
 
-Finally, all front requests will be forwarded as a reverse proxy to the *origin server* conveniently.
+All user-agent requests are forwarded to the *origin server* conveniently.
+
+=== Origin server routing
+
+You can create a proxy that forwards all the traffic to a single server like seen before
+
+You can set an origin selector to route the traffic to a given server
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#originSelector}
+----
+
+You can set a function to create the client request to the origin server for ultimate flexibility
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#originRequestProvider}
+----
+
+=== Headers forwarding
+
+End-to-end headers are forwarded by the proxy, hop-by-hop headers are ignored.
+
+==== Request authority
+
+As a transparent proxy, the request authority ({@code Host} header for HTTP/1.1, {@code :authority} pseudo header
+for HTTP/2) is preserved.
+
+You can override the request authority
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#overrideAuthority}
+----
+
+When the request authority is overridden, the {@code x-forwarded-host} header is set on the request to the origin server
+with the original authority value.
+
+WARNING: changing the request authority can have undesirable side effects and can affect the proxied web server that might
+rely on the original request authority to handle cookies, URL redirects and such.
+
+=== WebSockets
+
+The proxy supports WebSocket by default.
+
+WebSocket handshake requests  are forwarded to the origin server (including the `connection` header)  and the handshake
+happens between the user agent and the origin server.
+
+You can configure WebSocket support with {@link io.vertx.httpproxy.ProxyOptions#setSupportWebSocket}.
+
+=== Proxy caching
+
+By default the proxy does not cache response and ignores most cache directives, you can enable caching by setting the cache options.
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#cacheConfig}
+----
+
+=== Proxy interception
+
+Interception is a powerful way to extend the proxy withg new features.
+
+You can implement {@link io.vertx.httpproxy.ProxyInterceptor#handleProxyRequest} to perform any operation on the proxy request
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#inboundInterceptor}
+----
+
+Likewise with the proxy response
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#outboundInterceptor}
+----
+
+==== Body filtering
+
+You can filter body by simply replacing the original {@link io.vertx.httpproxy.Body} with a new one
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#bodyFilter}
+----
+
+==== Interception control
+
+{@link io.vertx.httpproxy.ProxyContext#sendRequest} and {@link io.vertx.httpproxy.ProxyContext#sendResponse} continue the
+current interception chain and then send the result to the origin server or the user-agent.
+
+You can change the control, e.g you can send a response immediately to the user-agent without even requesting the origin server
+
+[source,java]
+----
+{@link examples.HttpProxyExamples#immediateResponse}
+----

@@ -13,8 +13,7 @@ package io.vertx.httpproxy;
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.VertxGen;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.streams.ReadStream;
@@ -48,7 +47,7 @@ public interface ProxyResponse {
   /**
    * Set the status code to be sent to the <i><b>user agent</b></i>.
    *
-   * <p> The initial value is the inbound response status code.
+   * <p> The initial value is the proxied response status code.
    *
    * @param sc the status code
    * @return a reference to this, so the API can be used fluently
@@ -66,7 +65,7 @@ public interface ProxyResponse {
   /**
    * Set the status message to be sent to the <i><b>user agent</b></i>.
    *
-   * <p> The initial value is the inbound response status message.
+   * <p> The initial value is the proxied response status message.
    *
    * @param statusMessage the status message
    * @return a reference to this, so the API can be used fluently
@@ -76,7 +75,7 @@ public interface ProxyResponse {
 
   /**
    * @return the headers that will be sent to the <i><b>user agent</b></i>, the returned headers can be modified. The headers
-   *         map is populated with the inbound response headers
+   *         map is populated with the proxied response headers
    */
   MultiMap headers();
 
@@ -101,24 +100,13 @@ public interface ProxyResponse {
   /**
    * Set the request body to be sent to the <i><b>user agent</b></i>.
    *
-   * <p>The initial request body value is the outbound response body.
+   * <p>The initial request body value is the proxied response body.
    *
    * @param body the new body
    * @return a reference to this, so the API can be used fluently
    */
   @Fluent
   ProxyResponse setBody(Body body);
-
-  /**
-   * Set a body filter.
-   *
-   * <p> The body filter can rewrite the response body sent to the <i><b>user agent</b></i>.
-   *
-   * @param filter the filter
-   * @return a reference to this, so the API can be used fluently
-   */
-  @Fluent
-  ProxyResponse bodyFilter(Function<ReadStream<Buffer>, ReadStream<Buffer>> filter);
 
   boolean publicCacheControl();
 
@@ -130,16 +118,14 @@ public interface ProxyResponse {
   String etag();
 
   /**
-   * Send the proxy response to the <i><b>user agent</b></i>.
-   *
-   * @param completionHandler the handler to be called when the response has been sent
+   * Send the proxies response to the <i><b>user agent</b></i>.
    */
-  void send(Handler<AsyncResult<Void>> completionHandler);
+  Future<Void> send();
 
   /**
    * Release the proxy response.
    *
-   * <p> The HTTP client inbound response is resumed, no HTTP inbound server response is sent.
+   * <p> The proxied response is resumed, no HTTP response is sent to the <i><b>user-agent</b></i>
    */
   @Fluent
   ProxyResponse release();

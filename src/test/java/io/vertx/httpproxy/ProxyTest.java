@@ -17,7 +17,10 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunnerWithParametersFactory;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,7 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
  */
+@RunWith(Parameterized.class)
+@Parameterized.UseParametersRunnerFactory(VertxUnitRunnerWithParametersFactory.class)
 public class ProxyTest extends ProxyTestBase {
+
+  public ProxyTest(ProxyOptions options) {
+    super(options);
+  }
 
   @Test
   public void testRoundRobinSelector(TestContext ctx) {
@@ -38,7 +47,7 @@ public class ProxyTest extends ProxyTestBase {
       backends[i] = startHttpBackend(ctx, 8081 + value, req -> req.response().end("" + value));
     }
     AtomicInteger count = new AtomicInteger();
-    startProxy(req -> Future.succeededFuture(backends[count.getAndIncrement() % backends.length]));
+    startProxy(proxy -> proxy.originSelector(req -> Future.succeededFuture(backends[count.getAndIncrement() % backends.length])));
     HttpClient client = vertx.createHttpClient();
     Map<String, AtomicInteger> result = Collections.synchronizedMap(new HashMap<>());
     Async latch = ctx.async();
@@ -63,5 +72,34 @@ public class ProxyTest extends ProxyTestBase {
         }
       });
     }
+  }
+
+  @Test
+  public void testFilter(TestContext ctx) {
+    Async latch = ctx.async(3);
+    SocketAddress backend = startHttpBackend(ctx, 8081, req -> req.response().end("HOLA"));
+    startProxy(proxy -> proxy.origin(backend).addInterceptor(new ProxyInterceptor() {
+      @Override
+      public Future<ProxyResponse> handleProxyRequest(ProxyContext context) {
+        Future<ProxyResponse> fut = context.sendRequest();
+        fut.onComplete(ctx.asyncAssertSuccess(v -> latch.countDown()));
+        return fut;
+      }
+      @Override
+      public Future<Void> handleProxyResponse(ProxyContext context) {
+        Future<Void> fut = context.sendResponse();
+        fut.onComplete(ctx.asyncAssertSuccess(v -> latch.countDown()));
+        return fut;
+      }
+    }));
+    HttpClient client = vertx.createHttpClient();
+    client
+      .request(HttpMethod.GET, 8080, "localhost", "/")
+      .compose(req -> req
+        .send()
+        .compose(HttpClientResponse::body)
+      ).onSuccess(buff -> {
+        latch.countDown();
+      });
   }
 }

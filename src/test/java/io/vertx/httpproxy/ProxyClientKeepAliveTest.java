@@ -10,6 +10,7 @@
  */
 package io.vertx.httpproxy;
 
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.*;
@@ -37,6 +38,10 @@ public class ProxyClientKeepAliveTest extends ProxyTestBase {
   protected boolean keepAlive = true;
   protected boolean pipelining = false;
 
+  public ProxyClientKeepAliveTest(ProxyOptions options) {
+    super(options);
+  }
+
   @Override
   public void setUp() {
     super.setUp();
@@ -60,7 +65,7 @@ public class ProxyClientKeepAliveTest extends ProxyTestBase {
   public void testGet(TestContext ctx) {
     SocketAddress backend = startHttpBackend(ctx, 8081, req -> {
       ctx.assertEquals("/somepath", req.uri());
-      ctx.assertEquals("localhost:8081", req.host());
+      ctx.assertEquals("localhost:8080", req.host());
       req.response().end("Hello World");
     });
     startProxy(backend);
@@ -459,7 +464,7 @@ public class ProxyClientKeepAliveTest extends ProxyTestBase {
 
   @Test
   public void testHandleLongInitialLength(TestContext ctx) {
-    proxyOptions.setMaxInitialLineLength(10000);
+    serverOptions.setMaxInitialLineLength(10000);
     Async latch = ctx.async();
     String uri = "/" + randomAlphaString(5999);
     SocketAddress backend = startHttpBackend(ctx, new HttpServerOptions().setPort(8081).setMaxInitialLineLength(10000), req -> {
@@ -706,17 +711,68 @@ public class ProxyClientKeepAliveTest extends ProxyTestBase {
   public void testPropagateHeaders(TestContext ctx) {
     SocketAddress backend = startHttpBackend(ctx, new HttpServerOptions().setPort(8081).setMaxInitialLineLength(10000), req -> {
       ctx.assertEquals("request_header_value", req.getHeader("request_header"));
+      ctx.assertNull(req.getHeader("proxy-authenticate"));
       req.response().putHeader("response_header", "response_header_value").end();
     });
     startProxy(backend);
     HttpClient client = vertx.createHttpClient();
     Async latch = ctx.async();
     client.request(GET, 8080, "localhost", "/", ctx.asyncAssertSuccess(req -> {
-      req.putHeader("request_header", "request_header_value").send(ctx.asyncAssertSuccess(resp -> {
+      req
+        .putHeader("request_header", "request_header_value")
+        .putHeader("proxy-authenticate", "proxy-authenticate_value")
+        .send(ctx.asyncAssertSuccess(resp -> {
         ctx.assertEquals(200, resp.statusCode());
         ctx.assertEquals("response_header_value", resp.getHeader("response_header"));
         latch.complete();
       }));
     }));
+  }
+
+  @Test
+  public void testAuthorityOverride1(TestContext ctx) {
+    testAuthorityOverride(ctx, "foo:8080", "foo:8080", "localhost:8080");
+  }
+
+  @Test
+  public void testAuthorityOverride2(TestContext ctx) {
+    testAuthorityOverride(ctx, "foo", "foo", "localhost:8080");
+  }
+
+  @Test
+  public void testAuthorityOverride3(TestContext ctx) {
+    testAuthorityOverride(ctx, "localhost:8080", "localhost:8080", null);
+  }
+
+  private void testAuthorityOverride(TestContext ctx, String authority, String expectedAuthority, String expectedForwardedHost) {
+    SocketAddress backend = startHttpBackend(ctx, 8081, req -> {
+      ctx.assertEquals("/somepath", req.uri());
+      ctx.assertEquals(expectedAuthority, req.host());
+      ctx.assertEquals(expectedForwardedHost, req.getHeader("x-forwarded-host"));
+      req.response().end("Hello World");
+    });
+    startProxy(proxy -> {
+      proxy.origin(backend);
+      proxy.addInterceptor(new ProxyInterceptor() {
+        @Override
+        public Future<ProxyResponse> handleProxyRequest(ProxyContext context) {
+          ProxyRequest request = context.request();
+          ctx.assertEquals("localhost:8080", request.getAuthority());
+          request.setAuthority(authority);
+          return ProxyInterceptor.super.handleProxyRequest(context);
+        }
+      });
+    });
+    HttpClient client = vertx.createHttpClient();
+    client.request(GET, 8080, "localhost", "/somepath")
+      .compose(req -> req
+        .send()
+        .compose(resp -> {
+          ctx.assertEquals(200, resp.statusCode());
+          return resp.body();
+        }))
+      .onComplete(ctx.asyncAssertSuccess(body -> {
+        ctx.assertEquals("Hello World", body.toString());
+      }));
   }
 }
